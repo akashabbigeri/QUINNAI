@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quinn AI</title>
+</head>
+<body>
+    <h1>Quinn AI</h1>
+    <div>
+        <textarea id="text_area" rows="20" cols="50" readonly></textarea>
+    </div>
+    <div>
+        <input id="user_input" type="text" size="50" placeholder="Enter your message...">
+        <button id="send_button">Send</button>
+    </div>
+    <script>
+        document.getElementById("send_button").addEventListener("click", function() {
+            var user_input = document.getElementById("user_input").value;
+            if (user_input) {
+                document.getElementById("text_area").value += "User: " + user_input + "\n";
+                document.getElementById("user_input").value = "";
+                fetch("/send", {
+                    method: "POST",
+                    body: JSON.stringify({ user_input: user_input }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById("text_area").value += "Quinn: " + data + "\n";
+                    // var audio = new Audio("/static/quinn_result.mp3");
+                    // audio.play();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
