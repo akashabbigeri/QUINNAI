@@ -1,53 +1,86 @@
-# Quinn AI — Conversational AI Assistant
+# Quinn AI
 
-An LLM-powered conversational AI system built for production deployment at JMedia Corp. Quinn handles multi-turn customer queries using the Google Gemini API, responds via voice, and tracks conversation context through a persistent SQL backend.
-
-## Results
-- **25% improvement** in customer query resolution efficiency
-- **40% reduction** in user interaction effort via voice response integration
-- Deployed across a live user base with cloud infrastructure on GCP
+A production-grade conversational AI assistant built with the Google Gemini API and Flask. Multi-turn conversation with per-user session isolation and server-side session storage.
 
 ## Architecture
-User Input (Text / Voice)
-↓
-Speech Recognition Engine
-↓
-Google Gemini API (LLM)
-↓
-SQL Backend (context + logging)
-↓
-Text + Voice Response
 
+```
+User (Browser)
+      ↓ HTTP POST /chat
+Flask REST API (app.py)
+      ↓
+Per-session history (Flask-Session / filesystem)
+      ↓
+Google Gemini 1.5 Flash
+      ↓
+JSON response → UI
+```
 
 ## Features
-- Multi-turn conversation with session-aware context tracking
-- Google Gemini API for natural language understanding and generation
-- Text-to-speech engine for voice responses
-- SQL database integration for persistent conversation logging
-- Responsible AI compliance built into response pipeline
+
+- **Multi-turn memory** — conversation history persists across messages per user session
+- **Per-user isolation** — each visitor gets their own independent chat session via server-side storage
+- **Session reset** — one-click conversation reset without page reload
+- **Safety filters** — Gemini safety settings block harmful content categories
+- **XSS-safe rendering** — all model output rendered via `textContent`, never `innerHTML`
 
 ## Tech Stack
-Python · Google Gemini API · Speech Engine (pyttsx3) · SQL · GCP · VMware
 
-## Installation
+Python · Flask · Flask-Session · Google Gemini API (`gemini-1.5-flash`) · python-dotenv
 
+## Getting Started
+
+**1. Clone the repo**
 ```bash
 git clone https://github.com/akashabbigeri/QUINNAI.git
 cd QUINNAI
+```
+
+**2. Install dependencies**
+```bash
 pip install -r requirements.txt
 ```
 
-Set your Gemini API key as an environment variable:
-
+**3. Set up environment variables**
 ```bash
-export GEMINI_API_KEY=your_key_here
+cp .env.example .env
 ```
 
-Run the app:
+Edit `.env` and fill in:
 
+```
+GEMINI_API_KEY=your_gemini_api_key_here
+SECRET_KEY=your_secret_key_here
+```
+
+Generate a secure `SECRET_KEY` with:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Get a Gemini API key at [aistudio.google.com](https://aistudio.google.com).
+
+**4. Run**
 ```bash
 python app.py
 ```
 
-## Context
-Built during an AI engineering internship at JMedia Corp (Oct 2023 – Feb 2024). Part of a broader suite of AI tools deployed to improve customer support operations.
+Open `http://localhost:5000`.
+
+## API
+
+| Endpoint | Method | Body | Description |
+|---|---|---|---|
+| `/` | GET | — | Serves the chat UI |
+| `/chat` | POST | `{"message": "..."}` | Send a message, returns `{"reply": "..."}` |
+| `/reset` | POST | — | Clears current session history |
+
+## Project Background
+
+Built during an AI engineering internship at JMedia Corp (Oct 2023 – Feb 2024) as part of a customer support automation suite. The system improved query resolution efficiency by 25% and reduced user interaction effort by 40% through voice response integration.
+
+## Notes
+
+- Session files accumulate in `.flask_sessions/` — not tracked by git
+- For multi-worker or cloud deployment, switch `SESSION_TYPE` to `redis`
+- The app will not start without both `GEMINI_API_KEY` and `SECRET_KEY` in `.env`
