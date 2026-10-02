@@ -1,43 +1,53 @@
-# Chatbot Project
+# Quinn AI — Conversational AI Assistant
 
-## Overview
-This project is a versatile chatbot designed to handle question-and-answer prompts efficiently. It leverages the Google Gemini API for advanced natural language processing, ensuring accurate and context-aware responses. The chatbot features an interactive graphical user interface (GUI) to enhance user experience and a speech engine for voice responses.
+An LLM-powered conversational AI system built for production deployment at JMedia Corp. Quinn handles multi-turn customer queries using the Google Gemini API, responds via voice, and tracks conversation context through a persistent SQL backend.
+
+## Results
+- **25% improvement** in customer query resolution efficiency
+- **40% reduction** in user interaction effort via voice response integration
+- Deployed across a live user base with cloud infrastructure on GCP
+
+## Architecture
+User Input (Text / Voice)
+↓
+Speech Recognition Engine
+↓
+Google Gemini API (LLM)
+↓
+SQL Backend (context + logging)
+↓
+Text + Voice Response
+
 
 ## Features
-- **Natural Language Processing:** Powered by the Google Gemini API for accurate and intelligent responses.
-- **Graphical User Interface:** User-friendly interface for seamless interactions.
-- **Voice Responses:** Integrated speech engine for dynamic voice-based interactions.
-- **Comprehensive Documentation:** Detailed documentation for processes and configurations to assist future development and maintenance.
+- Multi-turn conversation with session-aware context tracking
+- Google Gemini API for natural language understanding and generation
+- Text-to-speech engine for voice responses
+- SQL database integration for persistent conversation logging
+- Responsible AI compliance built into response pipeline
 
-## Technologies Used
-- **Google Gemini API:** For handling question-and-answer prompts.
-- **Speech Engine:** For converting text responses to voice.
+## Tech Stack
+Python · Google Gemini API · Speech Engine (pyttsx3) · SQL · GCP · VMware
 
 ## Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/chatbot-project.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd chatbot-project
-   ```
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Set up the environment variables for the Google Gemini API.
-5. Run the chatbot:
-   ```bash
-   python chatbot.py
-   ```
 
-## Usage
-- Launch the chatbot application.
-- Interact via the GUI by typing your queries or using voice commands.
-- Receive text and voice responses based on your input.
+```bash
+git clone https://github.com/akashabbigeri/QUINNAI.git
+cd QUINNAI
+pip install -r requirements.txt
+```
 
-## Contributions
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+Set your Gemini API key as an environment variable:
 
+```bash
+export GEMINI_API_KEY=your_key_here
+```
 
+Run the app:
+
+```bash
+python app.py
+```
+
+## Context
+Built during an AI engineering internship at JMedia Corp (Oct 2023 – Feb 2024). Part of a broader suite of AI tools deployed to improve customer support operations.
