@@ -1,6 +1,6 @@
 import os
-from flask import Flask, request, jsonify, render_template
-
+import secrets
+from flask import Flask, request, jsonify, render_template, session
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -9,9 +9,7 @@ load_dotenv()
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 app = Flask(__name__)
-
-# Multi-turn conversation history
-conversation_history = []
+app.secret_key = secrets.token_hex(32)
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
@@ -28,7 +26,12 @@ model = genai.GenerativeModel(
     system_instruction="You are Quinn, a helpful and concise AI assistant. Answer clearly and accurately."
 )
 
-chat = model.start_chat(history=[])
+
+def get_chat():
+    """Return a per-session chat instance."""
+    if "history" not in session:
+        session["history"] = []
+    return model.start_chat(history=session["history"])
 
 
 @app.route("/")
@@ -45,17 +48,21 @@ def chat_endpoint():
         return jsonify({"error": "No message provided"}), 400
 
     try:
+        chat = get_chat()
         response = chat.send_message(user_input)
-        reply = response.text
-        return jsonify({"reply": reply})
+        # Persist updated history back to session
+        session["history"] = [
+            {"role": m.role, "parts": [p.text for p in m.parts]}
+            for m in chat.history
+        ]
+        return jsonify({"reply": response.text})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/reset", methods=["POST"])
 def reset():
-    global chat
-    chat = model.start_chat(history=[])
+    session.pop("history", None)
     return jsonify({"status": "conversation reset"})
 
 
