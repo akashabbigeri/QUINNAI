@@ -1,91 +1,63 @@
-import google.generativeai as palm
 import os
-from gtts import gTTS
-import shutil
-from tkinter import *
-import tkinter.messagebox as tkmb
+from flask import Flask, request, jsonify, render_template
 
-#palm api
-palm.configure(api_key="AIzaSyAjwoJfLz3Co045-6Lfyn_p7gj1NDgLPc4")
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-#GUI window for getting user input
-root = Tk()
-root.title("Quinn")
+load_dotenv()
 
-# Create the chatbot's text area
-text_area = Text(root, bg="white", width=50, height=20)
-text_area.pack()
-
-# Create the user's input field
-input_field = Entry(root, width=50)
-input_field.pack()
-
-# Create the send button
-send_button = Button(root, text="Send", command=lambda: send_message())
-send_button.pack()
-
-def send_message():
-  # Get the user's input
-  user_input = input_field.get()
-
-  # Clear the input field
-  input_field.delete(0, END)
-  
-  defaults = {
-  'model': 'models/text-bison-001',
-  'temperature': 0.7,
-  'candidate_count': 1,
-  'top_k': 40,
-  'top_p': 0.95,
-  'max_output_tokens': 1024,
-  'stop_sequences': [],
-  'safety_settings': [{"category":"HARM_CATEGORY_DEROGATORY","threshold":1},{"category":"HARM_CATEGORY_TOXICITY","threshold":1},{"category":"HARM_CATEGORY_VIOLENCE","threshold":2},{"category":"HARM_CATEGORY_SEXUAL","threshold":2},{"category":"HARM_CATEGORY_MEDICAL","threshold":2},{"category":"HARM_CATEGORY_DANGEROUS","threshold":2}],
-}
-  
-  prompt = user_input                                                    #User Input
-  response = palm.generate_text(
-  **defaults,
-  prompt=prompt)
-  
-  #Speech Engine(Text to Speech)/VUI
-  speech = gTTS(text= response.result, lang= 'en', slow= False, tld= "co.uk")
-  speech.save("PALM_result.mp3")
-  shutil.move("PALM_result.mp3", r'D:\Speech_Results\PALM_result.mp3')
-  os.system(r'D:\Speech_Results\PALM_result.mp3')
-  
-  # Display the response in the chatbot's text area
-  text_area.insert(END, f"User: {user_input}\n")
-  text_area.insert(END, f"Quinn: {response.result}\n")
-
-root.mainloop()
-
-#Flask for Webapplication
-from flask import Flask, request, render_template
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 app = Flask(__name__)
+
+# Multi-turn conversation history
+conversation_history = []
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config={
+        "temperature": 0.7,
+        "max_output_tokens": 1024,
+    },
+    safety_settings=[
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    ],
+    system_instruction="You are Quinn, a helpful and concise AI assistant. Answer clearly and accurately."
+)
+
+chat = model.start_chat(history=[])
+
 
 @app.route("/")
 def index():
-  return render_template("index.html")
+    return render_template("index.html")
 
-@app.route("/send", methods=["POST"])
-def send():
-  user_input = request.form["user_input"]
-  response = response.result(user_input)
-  return render_template("index.html", response=response.result)
 
-@app.errorhandler(500)
-def internal_server_error(error):
-    return 'Internal Server Error: {}'.format(error), 500
+@app.route("/chat", methods=["POST"])
+def chat_endpoint():
+    data = request.get_json()
+    user_input = data.get("message", "").strip()
 
-from logging import FileHandler, WARNING
+    if not user_input:
+        return jsonify({"error": "No message provided"}), 400
 
-file_handler = FileHandler('errorlog.txt')
-file_handler.setLevel(WARNING)
+    try:
+        response = chat.send_message(user_input)
+        reply = response.text
+        return jsonify({"reply": reply})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-app = Flask(__name__)
-app.logger.addHandler(file_handler)
+
+@app.route("/reset", methods=["POST"])
+def reset():
+    global chat
+    chat = model.start_chat(history=[])
+    return jsonify({"status": "conversation reset"})
 
 
 if __name__ == "__main__":
-  app.run()
+    app.run(debug=False)
