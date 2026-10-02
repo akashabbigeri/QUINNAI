@@ -1,7 +1,7 @@
 import os
-import secrets
 from flask import Flask, request, jsonify, render_template, session
 from dotenv import load_dotenv
+from flask_session import Session
 import google.generativeai as genai
 
 load_dotenv()
@@ -9,7 +9,11 @@ load_dotenv()
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = "./.flask_sessions"
+app.config["SESSION_PERMANENT"] = False
+Session(app)
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
@@ -18,8 +22,8 @@ model = genai.GenerativeModel(
         "max_output_tokens": 1024,
     },
     safety_settings=[
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HARASSMENT",        "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH",       "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
         {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
         {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
     ],
@@ -28,10 +32,8 @@ model = genai.GenerativeModel(
 
 
 def get_chat():
-    """Return a per-session chat instance."""
-    if "history" not in session:
-        session["history"] = []
-    return model.start_chat(history=session["history"])
+    history = session.get("history", [])
+    return model.start_chat(history=history)
 
 
 @app.route("/")
@@ -50,9 +52,8 @@ def chat_endpoint():
     try:
         chat = get_chat()
         response = chat.send_message(user_input)
-        # Persist updated history back to session
         session["history"] = [
-            {"role": m.role, "parts": [p.text for p in m.parts]}
+            {"role": m.role, "parts": [p.text for p in m.parts if hasattr(p, "text")]}
             for m in chat.history
         ]
         return jsonify({"reply": response.text})
